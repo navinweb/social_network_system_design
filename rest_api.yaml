@@ -1,0 +1,1578 @@
+openapi: 3.0.3
+info:
+  title: Social Network API
+  description: REST API для социальной сети с поддержкой высоких нагрузок (10M DAU)
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api@gotothehell.ru
+servers:
+  - url: 'https://api.gotothehell.ru/v1'
+    description: Prod server
+  - url: 'https://stage.gotothehell.ru/v1'
+    description: Stage server
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          example: user_name
+        email:
+          type: string
+          format: email
+          example: user@ya.ru
+        displayName:
+          type: string
+          maxLength: 50
+          example: Василий Уткин
+        followersCount:
+          type: integer
+          minimum: 0
+          example: 1250
+        followingCount:
+          type: integer
+          minimum: 0
+          example: 340
+        postsCount:
+          type: integer
+          minimum: 0
+          example: 89
+        createdAt:
+          type: string
+          format: date-time
+          example: '2023-01-15T10:30:00Z'
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 456e7890-e89b-12d3-a456-426614174001
+        authorId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        author:
+          $ref: '#/components/schemas/UserProfile'
+        content:
+          type: string
+          maxLength: 2000
+          example: Мама, я в Италии!
+        images:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        location:
+          $ref: '#/components/schemas/Location'
+          nullable: true
+        likesCount:
+          type: integer
+          minimum: 0
+          example: 42
+        commentsCount:
+          type: integer
+          minimum: 0
+          example: 8
+        sharesCount:
+          type: integer
+          minimum: 0
+          example: 3
+        isLiked:
+          type: boolean
+          example: false
+          description: Лайкнул ли текущий пользователь этот пост
+        createdAt:
+          type: string
+          format: date-time
+          example: '2023-12-01T14:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2023-12-01T14:35:00Z'
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+    MediaItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 789e0123-e89b-12d3-a456-426614174002
+        url:
+          type: string
+          format: uri
+          example: 'https://cdn.gotothehell.ru/images/789.jpg'
+        thumbnailUrl:
+          type: string
+          format: uri
+          example: 'https://cdn.gotothehell.ru/thumbs/789.jpg'
+        type:
+          type: string
+          enum:
+            - image
+            - video
+          example: image
+        width:
+          type: integer
+          example: 1920
+        height:
+          type: integer
+          example: 1080
+        size:
+          type: integer
+          example: 2048576
+          description: Размер файла в байтах
+    Location:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: abc12345-e89b-12d3-a456-426614174003
+        name:
+          type: string
+          example: Colyseus
+        city:
+          type: string
+          example: Rome
+        country:
+          type: string
+          example: Italy
+        latitude:
+          type: number
+          format: float
+          example: 55.7539
+        longitude:
+          type: number
+          format: float
+          example: 37.6208
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: comment-123-456
+        postId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        author:
+          $ref: '#/components/schemas/UserProfile'
+        content:
+          type: string
+          maxLength: 1000
+          example: Класс!
+        likesCount:
+          type: integer
+          minimum: 0
+          example: 5
+        isLiked:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - like
+            - comment
+            - follow
+            - mention
+          example: like
+        title:
+          type: string
+          example: user_name понравился ваш пост
+        message:
+          type: string
+          example: user_name и 5 другим понравился ваш пост
+        isRead:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+        relatedUserId:
+          type: string
+          format: uuid
+          nullable: true
+        relatedPostId:
+          type: string
+          format: uuid
+          nullable: true
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reporterId:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+          enum:
+            - post
+            - user
+            - comment
+        targetId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          enum:
+            - spam
+            - harassment
+            - inappropriate_content
+            - fake_account
+            - other
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        status:
+          type: string
+          enum:
+            - pending
+            - reviewed
+            - resolved
+            - rejected
+          example: pending
+        createdAt:
+          type: string
+          format: date-time
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+              minimum: 1
+              example: 1
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 100
+              example: 20
+            total:
+              type: integer
+              example: 250
+            hasNext:
+              type: boolean
+              example: true
+            hasPrev:
+              type: boolean
+              example: false
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Invalid request data
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: username
+                  message:
+                    type: string
+                    example: Имя пользователя должно быть минимум 3 символа
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Номер страницы
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Количество элементов на странице
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    UserIdParam:
+      name: userId
+      in: path
+      description: ID пользователя
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PostIdParam:
+      name: postId
+      in: path
+      description: ID поста
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    UnauthorizedError:
+      description: Необходима авторизация
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: Недостаточно прав доступа
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Ошибка валидации данных
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimitError:
+      description: Превышен лимит запросов
+      headers:
+        X-RateLimit-Limit:
+          description: Общий лимит запросов
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Оставшееся количество запросов
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Время сброса лимита (Unix timestamp)
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Регистрация нового пользователя
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 30
+                  pattern: '^[a-zA-Z0-9_]+$'
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                displayName:
+                  type: string
+                  maxLength: 50
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Пользователь с такими данными уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Авторизация пользователя
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+              properties:
+                login:
+                  type: string
+                  description: Username или email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Успешная авторизация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '401':
+          description: Неверные учетные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Выход из системы
+      responses:
+        '200':
+          description: Успешный выход
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Успешный выход
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Обновление токена доступа
+      responses:
+        '200':
+          description: Токен обновлен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Получить информацию о текущем пользователе
+      responses:
+        '200':
+          description: Информация о пользователе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      tags:
+        - Users
+      summary: Обновить профиль текущего пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                  maxLength: 50
+                bio:
+                  type: string
+                  maxLength: 500
+                isPrivate:
+                  type: boolean
+      responses:
+        '200':
+          description: Профиль обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  '/users/{userId}':
+    get:
+      tags:
+        - Users
+      summary: Получить профиль пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/User'
+                  - type: object
+                    properties:
+                      isFollowing:
+                        type: boolean
+                        description: Подписан ли текущий пользователь на этого
+                      isFollowedBy:
+                        type: boolean
+                        description: Подписан ли этот пользователь на текущего
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /users/search:
+    get:
+      tags:
+        - Users
+      summary: Поиск пользователей
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Поисковый запрос
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Результаты поиска
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+  '/users/{userId}/follow':
+    post:
+      tags:
+        - Follows
+      summary: Подписаться на пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: Подписка оформлена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Подписка оформлена
+                  isFollowing:
+                    type: boolean
+                    example: true
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Уже подписан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Follows
+      summary: Отписаться от пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: Отписка выполнена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Отписка выполнена
+                  isFollowing:
+                    type: boolean
+                    example: false
+  '/users/{userId}/followers':
+    get:
+      tags:
+        - Follows
+      summary: Получить список подписчиков пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список подписчиков
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+  '/users/{userId}/following':
+    get:
+      tags:
+        - Follows
+      summary: Получить список подписок пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Список подписок
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+  /posts:
+    post:
+      tags:
+        - Posts
+      summary: Создать новый пост
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  maxLength: 2000
+                  description: Текст поста
+                images:
+                  type: array
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: binary
+                  description: Изображения (максимум 10 файлов по 10MB)
+                locationId:
+                  type: string
+                  format: uuid
+                  description: ID локации
+      responses:
+        '201':
+          description: Пост создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+    get:
+      tags:
+        - Posts
+      summary: Получить ленту постов (по подпискам)
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: cursor
+          in: query
+          description: Курсор для пагинации (timestamp)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Лента постов
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Post'
+                      nextCursor:
+                        type: string
+                        nullable: true
+                        description: Курсор для следующей страницы
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  '/posts/{postId}':
+    get:
+      tags:
+        - Posts
+      summary: Получить пост по ID
+      parameters:
+        - $ref: '#/components/parameters/PostIdParam'
+      responses:
+        '200':
+          description: Информация о посте
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      tags:
+        - Posts
+      summary: Редактировать пост
+      parameters:
+        - $ref: '#/components/parameters/PostIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Пост обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      tags:
+        - Posts
+      summary: Удалить пост
+      parameters:
+        - $ref: '#/components/parameters/PostIdParam'
+      responses:
+        '204':
+          description: Пост удален
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  '/posts/{postId}/like':
+    post:
+      tags:
+        - Posts
+      summary: Лайкнуть пост
+      parameters:
+        - $ref: '#/components/parameters/PostIdParam'
+      responses:
+        '200':
+          description: Лайк поставлен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isLiked:
+                    type: boolean
+                    example: true
+                  likesCount:
+                    type: integer
+                    example: 43
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+    delete:
+      tags:
+        - Posts
+      summary: Убрать лайк
+      parameters:
+        - $ref: '#/components/parameters/PostIdParam'
+      responses:
+        '200':
+          description: Лайк убран
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isLiked:
+                    type: boolean
+                    example: false
+                  likesCount:
+                    type: integer
+                    example: 42
+  '/users/{userId}/posts':
+    get:
+      tags:
+        - Posts
+      summary: Получить посты пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Посты пользователя
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Post'
+  '/posts/{postId}/comments':
+    get:
+      tags:
+        - Comments
+      summary: Получить комментарии к посту
+      parameters:
+        - $ref: '#/components/parameters/PostIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Комментарии к посту
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Comment'
+    post:
+      tags:
+        - Comments
+      summary: Добавить комментарий к посту
+      parameters:
+        - $ref: '#/components/parameters/PostIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Комментарий добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+  '/comments/{commentId}':
+    put:
+      tags:
+        - Comments
+      summary: Редактировать комментарий
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Комментарий обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      tags:
+        - Comments
+      summary: Удалить комментарий
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Комментарий удален
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  '/comments/{commentId}/like':
+    post:
+      tags:
+        - Comments
+      summary: Лайкнуть комментарий
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Лайк поставлен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isLiked:
+                    type: boolean
+                    example: true
+                  likesCount:
+                    type: integer
+                    example: 6
+    delete:
+      tags:
+        - Comments
+      summary: Убрать лайк с комментария
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Лайк убран
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isLiked:
+                    type: boolean
+                    example: false
+                  likesCount:
+                    type: integer
+                    example: 5
+  /locations/search:
+    get:
+      tags:
+        - Locations
+      summary: Поиск популярных мест
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Название места
+          schema:
+            type: string
+            minLength: 1
+        - name: lat
+          in: query
+          description: Широта для поиска поблизости
+          schema:
+            type: number
+            format: float
+        - name: lng
+          in: query
+          description: Долгота для поиска поблизости
+          schema:
+            type: number
+            format: float
+        - name: radius
+          in: query
+          description: Радиус поиска в километрах
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Найденные места
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Location'
+  '/locations/{locationId}':
+    get:
+      tags:
+        - Locations
+      summary: Получить информацию о месте
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Информация о месте
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Location'
+                  - type: object
+                    properties:
+                      postsCount:
+                        type: integer
+                        description: Количество постов в этом месте
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  '/locations/{locationId}/posts':
+    get:
+      tags:
+        - Locations
+      summary: Получить посты по локации
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Посты в данной локации
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Post'
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Получить список уведомлений
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: type
+          in: query
+          description: Фильтр по типу уведомлений
+          schema:
+            type: string
+            enum:
+              - like
+              - comment
+              - follow
+              - mention
+        - name: unread
+          in: query
+          description: Только непрочитанные уведомления
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список уведомлений
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Notification'
+                      unreadCount:
+                        type: integer
+                        description: Общее количество непрочитанных
+  '/notifications/{notificationId}/read':
+    post:
+      tags:
+        - Notifications
+      summary: Пометить уведомление как прочитанное
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Уведомление помечено как прочитанное
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Notification marked as read
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /notifications/read-all:
+    post:
+      tags:
+        - Notifications
+      summary: Пометить все уведомления как прочитанные
+      responses:
+        '200':
+          description: Все уведомления помечены как прочитанные
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: All notifications marked as read
+                  markedCount:
+                    type: integer
+                    description: Количество помеченных уведомлений
+  /notifications/settings:
+    get:
+      tags:
+        - Notifications
+      summary: Получить настройки уведомлений
+      responses:
+        '200':
+          description: Настройки уведомлений
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  push:
+                    type: object
+                    properties:
+                      likes:
+                        type: boolean
+                      comments:
+                        type: boolean
+                      follows:
+                        type: boolean
+                      mentions:
+                        type: boolean
+                  email:
+                    type: object
+                    properties:
+                      likes:
+                        type: boolean
+                      comments:
+                        type: boolean
+                      follows:
+                        type: boolean
+                      mentions:
+                        type: boolean
+                      digest:
+                        type: boolean
+                        description: Еженедельная сводка
+    put:
+      tags:
+        - Notifications
+      summary: Обновить настройки уведомлений
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                push:
+                  type: object
+                  properties:
+                    likes:
+                      type: boolean
+                    comments:
+                      type: boolean
+                    follows:
+                      type: boolean
+                    mentions:
+                      type: boolean
+                email:
+                  type: object
+                  properties:
+                    likes:
+                      type: boolean
+                    comments:
+                      type: boolean
+                    follows:
+                      type: boolean
+                    mentions:
+                      type: boolean
+                    digest:
+                      type: boolean
+      responses:
+        '200':
+          description: Настройки обновлены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Notification settings updated
+  /reports:
+    post:
+      tags:
+        - Moderation
+      summary: Подать жалобу на пост/пользователя/комментарий
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetType
+                - targetId
+                - reason
+              properties:
+                targetType:
+                  type: string
+                  enum:
+                    - post
+                    - user
+                    - comment
+                targetId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  enum:
+                    - spam
+                    - harassment
+                    - inappropriate_content
+                    - fake_account
+                    - other
+                description:
+                  type: string
+                  maxLength: 1000
+                  description: Дополнительное описание (обязательно для reason=other)
+      responses:
+        '201':
+          description: Жалоба подана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+    get:
+      tags:
+        - Moderation
+      summary: Получить мои жалобы (для модераторов - все жалобы)
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: Фильтр по статусу
+          schema:
+            type: string
+            enum:
+              - pending
+              - reviewed
+              - resolved
+              - rejected
+        - name: targetType
+          in: query
+          description: Фильтр по типу объекта
+          schema:
+            type: string
+            enum:
+              - post
+              - user
+              - comment
+      responses:
+        '200':
+          description: Список жалоб
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Report'
+  /media/upload:
+    post:
+      tags:
+        - Media
+      summary: Загрузить медиа-файл
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Изображение или видео (максимум 50MB)
+                type:
+                  type: string
+                  enum:
+                    - avatar
+                    - post_image
+                    - post_video
+                  default: post_image
+      responses:
+        '201':
+          description: Файл загружен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaItem'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '413':
+          description: Файл слишком большой
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+  /health:
+    get:
+      tags:
+        - System
+      summary: Проверка состояния API
+      security: []
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: 1.0.0
+                  uptime:
+                    type: integer
+                    description: Время работы в секундах
+  /rate-limit:
+    get:
+      tags:
+        - System
+      summary: Информация о лимитах запросов
+      responses:
+        '200':
+          description: Информация о rate limit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  limits:
+                    type: object
+                    properties:
+                      posts:
+                        type: object
+                        properties:
+                          hourly:
+                            type: integer
+                            example: 10
+                          daily:
+                            type: integer
+                            example: 50
+                      comments:
+                        type: object
+                        properties:
+                          hourly:
+                            type: integer
+                            example: 100
+                          daily:
+                            type: integer
+                            example: 500
+                      likes:
+                        type: object
+                        properties:
+                          hourly:
+                            type: integer
+                            example: 1000
+                          daily:
+                            type: integer
+                            example: 5000
+                      follows:
+                        type: object
+                        properties:
+                          hourly:
+                            type: integer
+                            example: 100
+                          daily:
+                            type: integer
+                            example: 200
+                  current:
+                    type: object
+                    properties:
+                      remaining:
+                        type: object
+                        properties:
+                          posts:
+                            type: integer
+                          comments:
+                            type: integer
+                          likes:
+                            type: integer
+                          follows:
+                            type: integer
+                      resetTime:
+                        type: string
+                        format: date-time
