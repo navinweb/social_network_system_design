@@ -588,7 +588,9 @@ paths:
     put:
       tags:
         - Users
-      summary: Обновить профиль текущего пользователя
+      summary: Обновить профиль пользователя
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
       requestBody:
         required: true
         content:
@@ -615,6 +617,14 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Нельзя редактировать чужой профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
   '/users/{userId}/follows':
     post:
       tags:
@@ -1213,7 +1223,7 @@ paths:
       patch:
         tags:
           - Notifications
-        summary: Обновить уведомление
+        summary: Изменить статус прочитанности уведомления
         parameters:
           - name: notificationId
             in: path
@@ -1230,9 +1240,10 @@ paths:
                 properties:
                   isRead:
                     type: boolean
+                    description: true - отметить как прочитанное, false - как непрочитанное
         responses:
           '200':
-            description: Уведомление обновлено
+            description: Статус уведомления изменен
             content:
               application/json:
                 schema:
