@@ -42,9 +42,6 @@ Table post_media {
   post_id uuid [not null, ref: > posts.id]
   url varchar(255) [not null]
   thumbnail_url varchar(255)
-  width integer
-  height integer
-  size_bytes bigint
   created_at timestamp [default: `now()`]
   
   indexes {
