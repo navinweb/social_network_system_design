@@ -234,31 +234,6 @@
 - **SSD SATA:** 91 + 1 + 1 + 1 + 1 + 1 + 81 + 1 + 2 = **180 дисков**  
 - **NVMe SSD:** 1 + 4 + 9 = **14 дисков**
 
-
-
-```dbml
-// Replication:
-// - Master-Slave (1 sync + async replicas)
-// - Replication factor: 2
-//
-// Sharding:
-// - Consistent hashing by post_id
-// - Tier storage: горячий (3 мес, SATA SSD) + холодный (HDD)
-
-Table post_media {
-  id uuid [primary key, default: `gen_random_uuid()`]
-  post_id uuid [not null, ref: > posts.id]
-  url varchar(255) [not null]
-  thumbnail_url varchar(255)
-  created_at timestamp [default: `now()`]
-  
-  indexes {
-    post_id
-    (post_id)
-  }
-}
-```
-
 ---
 
 # Подсчёт хостов
