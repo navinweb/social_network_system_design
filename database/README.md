@@ -233,4 +233,126 @@
 
 - **SSD SATA:** 91 + 1 + 1 + 1 + 1 + 1 + 81 + 1 + 2 = **180 дисков**  
 - **NVMe SSD:** 1 + 4 + 9 = **14 дисков**
-- 
+
+
+
+```dbml
+// Replication:
+// - Master-Slave (1 sync + async replicas)
+// - Replication factor: 2
+//
+// Sharding:
+// - Consistent hashing by post_id
+// - Tier storage: горячий (3 мес, SATA SSD) + холодный (HDD)
+
+Table post_media {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  post_id uuid [not null, ref: > posts.id]
+  url varchar(255) [not null]
+  thumbnail_url varchar(255)
+  created_at timestamp [default: `now()`]
+  
+  indexes {
+    post_id
+    (post_id)
+  }
+}
+```
+
+---
+
+# Подсчёт хостов
+
+### Подсистема постов (Posts + Users + Locations):
+- **Посты (NVMe SSD):**
+  - Hosts = 1 / 1 = 1
+  - Hosts_with_replication = 1 × 3 = 3
+  
+- **Пользователи (SATA SSD):**
+  - Hosts = 1 / 1 = 1
+  - Hosts_with_replication = 1 × 2 = 2
+  
+- **Локации (SATA SSD):**
+  - Hosts = 1 / 1 = 1
+  - Hosts_with_replication = 1 × 2 = 2
+
+**Итого постов:** 3 + 2 + 2 = **7 хостов**
+
+---
+
+### Подсистема медиа (Post_media):
+- **Горячий слой (SATA SSD, 3 месяца):**
+  - Hosts = 23 / 2 = 12
+  - Hosts_with_replication = 12 × 2 = 24
+
+- **Холодный слой (HDD, архив):**
+  - Hosts = 214 / 2 = 107
+  - Hosts_with_replication = 107 × 2 = 214
+
+**Итого медиа:** 24 + 214 = **238 хостов**
+
+---
+
+### Подсистема комментариев и реакций (Comments + Likes):
+- **Комментарии (SATA SSD):**
+  - Hosts = 1 / 1 = 1
+  - Hosts_with_replication = 1 × 2 = 2
+
+- **Лайки (NVMe SSD):**
+  - Hosts = 4 / 1 = 4
+  - Hosts_with_replication = 4 × 2 = 8
+
+**Итого комментарии и реакции:** 2 + 8 = **10 хостов**
+
+---
+
+### Подсистема социального графа (Follows):
+- **Подписки (SATA SSD):**
+  - Hosts = 1 / 1 = 1
+  - Hosts_with_replication = 1 × 2 = 2
+
+**Итого подписки:** **2 хоста**
+
+---
+
+### Подсистема уведомлений (Notifications + Notification_settings):
+- **Уведомления горячие (NVMe SSD, 90 дней):**
+  - Hosts = 9 / 1 = 9
+  - Hosts_with_replication = 9 × 2 = 18
+
+- **Уведомления архив (SATA SSD):**
+  - Hosts = 81 / 2 = 41
+  - Hosts_with_replication = 41 × 2 = 82
+
+- **Настройки уведомлений (SATA SSD):**
+  - Hosts = 1 / 1 = 1
+  - Hosts_with_replication = 1 × 2 = 2
+
+**Итого уведомления:** 18 + 82 + 2 = **102 хоста**
+
+---
+
+### Подсистема модерации (Reports):
+- **Жалобы (SATA SSD):**
+  - Hosts = 1 / 1 = 1
+  - Hosts_with_replication = 1 × 2 = 2
+
+**Итого модерация:** **2 хоста**
+
+---
+
+### Подсистема сессий (Sessions - PostgreSQL):
+- **Сессии (SATA SSD):**
+  - Hosts = 2 / 1 = 2
+  - Hosts_with_replication = 2 × 2 = 4
+
+**Итого сессии:** **4 хоста**
+
+---
+
+## **Total: 365 хостов**
+
+**Распределение по типам дисков:**
+- NVMe SSD: 3 + 8 + 18 = 29 хостов
+- SATA SSD: 2 + 2 + 24 + 2 + 2 + 82 + 2 + 4 = 120 хостов
+- HDD: 214 хостов
