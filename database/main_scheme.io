@@ -55,7 +55,6 @@ Table posts {
 //
 // Sharding:
 // - Consistent hashing by post_id
-// - Объектное хранилище S3/MinIO
 // - Tier storage: горячий (3 мес, SATA SSD) + холодный (HDD/S3)
 Table post_media {
   id uuid [primary key, default: `gen_random_uuid()`]
