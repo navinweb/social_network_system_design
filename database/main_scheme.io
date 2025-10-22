@@ -1,6 +1,6 @@
 // Replication:
 // - Master-Slave (1 sync + async replicas)
-// - Replication factor: 2
+// - Replication factor: 3
 //
 // Sharding:
 // - Hash-based by user_id
