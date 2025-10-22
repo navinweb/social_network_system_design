@@ -1,3 +1,9 @@
+// Replication:
+// - Master-Slave (1 sync + async replicas)
+// - Replication factor: 3
+//
+// Sharding:
+// - Hash-based by user_id
 Table users {
   id uuid [primary key, default: `gen_random_uuid()`]
   username varchar(30) [not null, unique]
@@ -18,6 +24,12 @@ Table users {
   }
 }
 
+// Replication:
+// - Master-Slave (1 sync + async replicas)
+// - Replication factor: 3
+//
+// Sharding:
+// - Hash-based by author_id
 Table posts {
   id uuid [primary key, default: `gen_random_uuid()`]
   author_id uuid [not null, ref: > users.id]
@@ -37,6 +49,13 @@ Table posts {
   }
 }
 
+// Replication:
+// - Multi-datacenter replication
+// - Replication factor: 2
+//
+// Sharding:
+// - Consistent hashing by post_id
+// - Tier storage: горячий (3 мес, SATA SSD) + холодный (HDD/S3)
 Table post_media {
   id uuid [primary key, default: `gen_random_uuid()`]
   post_id uuid [not null, ref: > posts.id]
@@ -50,6 +69,12 @@ Table post_media {
   }
 }
 
+// Replication:
+// - Master-Slave (1 sync + async replicas)
+// - Replication factor: 2
+//
+// Sharding:
+// - Hash-based by post_id
 Table comments {
   id uuid [primary key, default: `gen_random_uuid()`]
   post_id uuid [not null, ref: > posts.id]
@@ -71,6 +96,12 @@ Table comments {
   }
 }
 
+// Replication:
+// - Master-Slave (read replicas)
+// - Replication factor: 2
+//
+// Sharding:
+// - Нет
 Table locations {
   id uuid [primary key, default: `gen_random_uuid()`]
   name varchar(255) [not null]
@@ -89,6 +120,13 @@ Table locations {
   }
 }
 
+// Replication:
+// - Multi-Master
+// - Replication factor: 2
+//
+// Sharding:
+// - Hash-based by target_id (post_id)
+// - Высокая write-нагрузка, multi-master для параллельной записи
 Table likes {
   id bigserial [primary key]
   user_id uuid [not null, ref: > users.id]
@@ -102,6 +140,12 @@ Table likes {
   }
 }
 
+// Replication:
+// - Master-Slave (1 sync + async replicas)
+// - Replication factor: 2
+//
+// Sharding:
+// - Hash-based by follower_id
 Table follows {
   id bigserial [primary key]
   follower_id uuid [not null, ref: > users.id]
@@ -116,6 +160,12 @@ Table follows {
   }
 }
 
+// Replication:
+// - Master-Slave (1 sync replica)
+// - Replication factor: 2
+//
+// Sharding:
+// - Нет
 Table reports {
   id uuid [primary key, default: `gen_random_uuid()`]
   reporter_id uuid [not null, ref: > users.id]
@@ -137,6 +187,12 @@ Table reports {
   }
 }
 
+// Replication:
+// - Master-Slave (1 sync + async replicas)
+// - Replication factor: 2
+//
+// Sharding:
+// - Hash-based by user_id
 Table notifications {
   id uuid [primary key, default: `gen_random_uuid()`]
   user_id uuid [not null, ref: > users.id]
@@ -156,6 +212,12 @@ Table notifications {
   }
 }
 
+// Replication:
+// - Master-Slave (1 sync replica)
+// - Replication factor: 2
+//
+// Sharding:
+// - Hash-based by user_id
 Table notification_settings {
   user_id uuid [primary key, ref: > users.id]
   push_likes boolean [default: true]
@@ -170,6 +232,12 @@ Table notification_settings {
   updated_at timestamp [default: `now()`]
 }
 
+// Replication:
+// - Master-Slave (1 sync + async replicas)
+// - Replication factor: 2
+//
+// Sharding:
+// - Hash-based by user_id
 Table sessions {
   id uuid [primary key, default: `gen_random_uuid()`]
   user_id uuid [not null, ref: > users.id]
