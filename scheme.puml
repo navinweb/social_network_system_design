@@ -3,14 +3,14 @@
 
 LAYOUT_WITH_LEGEND()
 
-title Container Diagram - Соцсеть для путешественников (Optimized)
+title Container Diagram - Соцсеть для путешественников
 
 Person(user, "User", "Пользователь социальной сети")
 
 Container(api_gateway, "API Gateway", "Nginx", "Маршрутизация, rate limiting")
 
 System_Ext(email_service, "Email Service", "Внешний сервис email")
-System_Ext(push_service, "Push Service", "FCM/APNS")
+System_Ext(push_service, "Push Service")
 
 Container(message_broker, "Message Broker", "Kafka Cluster", "5 brokers\n72 партиции (all topics)\nlike.created: 32p\nnotification.batch: 16p\ncomment.created: 8p\ncounter.update: 8p\nfollow.created: 4p\nuser.profile_updated: 4p")
 
@@ -23,7 +23,7 @@ System_Boundary(user_containers, "User Containers") {
 }
 
 Rel(auth_service, user_db_master, "Создает пользователей", "PostgreSQL")
-Rel(auth_service, email_service, "Email подтверждения", "SMTP/API")
+Rel(auth_service, email_service, "Email подтверждения")
 Rel(user_service, user_db_master, "Записывает профили", "PostgreSQL")
 Rel(user_service, user_db_replica_1, "Читает пользователей", "PostgreSQL")
 Rel(user_service, user_db_replica_2, "Читает (fallback)", "PostgreSQL")
@@ -117,8 +117,8 @@ Rel(notification_service, notification_db_r2, "Читает", "PostgreSQL")
 Rel(notification_service, notification_db_r3, "Читает", "PostgreSQL")
 Rel(notification_service, notification_db_r4, "Читает (fallback)", "PostgreSQL")
 Rel(notification_service, notification_settings_db, "Настройки", "150 RPS")
-Rel(notification_service, push_service, "Push-уведомления", "FCM/APNS")
-Rel(notification_service, email_service, "Email-уведомления", "SMTP")
+Rel(notification_service, push_service, "Push-уведомления")
+Rel(notification_service, email_service, "Email-уведомления")
 Rel(notification_worker_1, message_broker, "Подписывается на события", "Kafka Consumer")
 Rel(notification_worker_2, message_broker, "Подписывается на события", "Kafka Consumer")
 Rel(notification_worker_1, notification_db_master, "Записывает уведомления", "PostgreSQL")
