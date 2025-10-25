@@ -1,0 +1,167 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container Diagram - Соцсеть для путешественников
+
+Person(user, "User", "Пользователь социальной сети")
+
+Container(api_gateway, "API Gateway", "Nginx", "Маршрутизация, rate limiting")
+
+System_Ext(email_service, "Email Service", "Внешний сервис email")
+System_Ext(push_service, "Push Service")
+
+Container(message_broker, "Message Broker", "Kafka Cluster", "5 brokers\n72 партиции (all topics)\nlike.created: 32p\nnotification.batch: 16p\ncomment.created: 8p\ncounter.update: 8p\nfollow.created: 4p\nuser.profile_updated: 4p")
+
+System_Boundary(user_containers, "User Containers") {
+    Container(auth_service, "Auth Service", "Go", "Авторизация, JWT")
+    Container(user_service, "User Service", "Go", "Профили, поиск")
+    ContainerDb(user_db_master, "User DB Master", "PostgreSQL", "13 GB") 
+    ContainerDb(user_db_replica_1, "User DB Replica 1", "PostgreSQL", "Sync") 
+    ContainerDb(user_db_replica_2, "User DB Replica 2", "PostgreSQL", "Async")
+}
+
+Rel(auth_service, user_db_master, "Создает пользователей", "PostgreSQL")
+Rel(auth_service, email_service, "Email подтверждения")
+Rel(user_service, user_db_master, "Записывает профили", "PostgreSQL")
+Rel(user_service, user_db_replica_1, "Читает пользователей", "PostgreSQL")
+Rel(user_service, user_db_replica_2, "Читает (fallback)", "PostgreSQL")
+Rel(user_db_master, user_db_replica_1, "Sync replication", "Streaming")
+Rel(user_db_master, user_db_replica_2, "Async replication", "Streaming")
+Rel(user_service, message_broker, "Публикует события изменения профиля", "Kafka")
+
+System_Boundary(post_containers, "Post Containers") {
+    Container(post_service, "Post Service", "Go", "CRUD постов, денормализация author")
+    Container(media_service, "Media Service", "Go", "Загрузка медиа")
+    ContainerDb(post_db_master, "Post DB Master", "PostgreSQL", "2.6 TB\nNVMe")
+    ContainerDb(post_db_replica_1, "Post DB Replica 1", "PostgreSQL", "Sync")
+    ContainerDb(post_db_replica_2, "Post DB Replica 2", "PostgreSQL", "Async")
+    ContainerDb(media_hot, "Media Hot", "SATA SSD", "2.275 PB\n3 мес")
+    ContainerDb(media_cold, "Media Cold", "HDD/S3", "6.825 PB")
+}
+
+Rel(post_service, post_db_master, "Записывает посты", "72 RPS")
+Rel(post_service, post_db_replica_1, "Читает посты", "6,900 RPS")
+Rel(post_service, post_db_replica_2, "Читает (fallback)", "PostgreSQL")
+Rel(post_service, media_service, "Обработка медиа", "gRPC")
+Rel(post_service, message_broker, "Подписывается на события профилей", "Kafka Consumer")
+Rel(post_db_master, post_db_replica_1, "Sync replication", "Streaming")
+Rel(post_db_master, post_db_replica_2, "Async replication", "Streaming")
+Rel(media_service, media_hot, "Горячие медиа", "Object Storage")
+Rel(media_service, media_cold, "Холодные медиа", "Object Storage")
+Rel(media_hot, media_cold, "Миграция старых медиа", "Async")
+
+System_Boundary(comment_containers, "Comment Containers") {
+    Container(comment_service, "Comment Service", "Go", "Управление комментариями")
+    ContainerDb(comment_db_master, "Comment DB Master", "PostgreSQL", "3.28 TB")
+    ContainerDb(comment_db_replica, "Comment DB Replica", "PostgreSQL", "Sync")
+}
+
+Rel(comment_service, comment_db_master, "Записывает комментарии", "693 RPS")
+Rel(comment_service, comment_db_replica, "Читает комментарии", "PostgreSQL")
+Rel(comment_service, message_broker, "Публикует события комментариев", "Kafka Producer")
+Rel(comment_db_master, comment_db_replica, "Sync replication", "Streaming")
+
+System_Boundary(likes_containers, "Likes Containers") {
+    Container(likes_service, "Likes Service", "Go", "Управление лайками")
+    ContainerDb(likes_db_master, "Likes DB Master", "PostgreSQL", "32.5 TB\nShard 1")
+    ContainerDb(likes_db_replica_1, "Likes Replica 1", "PostgreSQL", "Sync")
+    ContainerDb(likes_db_replica_2, "Likes Replica 2", "PostgreSQL", "Sync")
+    ContainerDb(likes_db_replica_3, "Likes Replica 3", "PostgreSQL", "Async")
+}
+
+Rel(likes_service, likes_db_master, "Записывает лайки", "34,800 RPS")
+Rel(likes_service, likes_db_replica_1, "Читает лайки", "PostgreSQL")
+Rel(likes_service, likes_db_replica_2, "Читает лайки", "PostgreSQL")
+Rel(likes_service, likes_db_replica_3, "Читает (fallback)", "PostgreSQL")
+Rel(likes_service, message_broker, "Публикует события лайков", "Kafka Producer")
+Rel(likes_db_master, likes_db_replica_1, "Sync replication", "Streaming")
+Rel(likes_db_master, likes_db_replica_2, "Sync replication", "Streaming")
+Rel(likes_db_master, likes_db_replica_3, "Async replication", "Streaming")
+
+System_Boundary(social_containers, "Social Containers") {
+    Container(follow_service, "Follow Service", "Go", "Управление подписками")
+    ContainerDb(follow_db_master, "Follow DB Master", "PostgreSQL", "624 GB")
+    ContainerDb(follow_db_replica, "Follow DB Replica", "PostgreSQL", "Sync")
+}
+
+Rel(follow_service, follow_db_master, "Записывает подписки", "54 RPS")
+Rel(follow_service, follow_db_replica, "Читает подписки", "PostgreSQL")
+Rel(follow_service, message_broker, "Публикует события подписок", "Kafka Producer")
+Rel(follow_db_master, follow_db_replica, "Sync replication", "Streaming")
+
+System_Boundary(location_containers, "Location Containers") {
+    Container(location_service, "Location Service", "Go", "Локации, геопоиск")
+    ContainerDb(location_db, "Location DB", "PostgreSQL", "520 MB\nNo replicas")
+}
+
+Rel(location_service, location_db, "Читает/записывает локации", "3 RPS")
+Rel(post_service, location_service, "Получает локации", "gRPC")
+
+System_Boundary(notification_containers, "Notification Containers") {
+    Container(notification_service, "Notification Service", "Go", "Уведомления + батчинг")
+    Container(notification_worker_1, "Notification Worker 1", "Go", "Обработчик событий")
+    Container(notification_worker_2, "Notification Worker 2", "Go", "Обработчик событий")
+    ContainerDb(notification_db_master, "Notification DB Master", "PostgreSQL", "2.3 TB\n30 дней")
+    ContainerDb(notification_db_r1, "Notification Replica 1", "PostgreSQL", "Sync")
+    ContainerDb(notification_db_r2, "Notification Replica 2", "PostgreSQL", "Sync")
+    ContainerDb(notification_db_r3, "Notification Replica 3", "PostgreSQL", "Sync")
+    ContainerDb(notification_db_r4, "Notification Replica 4", "PostgreSQL", "Async")
+    ContainerDb(notification_settings_db, "Settings DB", "PostgreSQL", "2.6 GB")
+}
+
+Rel(notification_service, notification_db_master, "Записывает", "Batched writes")
+Rel(notification_service, notification_db_r1, "Читает", "45,000 RPS")
+Rel(notification_service, notification_db_r2, "Читает", "PostgreSQL")
+Rel(notification_service, notification_db_r3, "Читает", "PostgreSQL")
+Rel(notification_service, notification_db_r4, "Читает (fallback)", "PostgreSQL")
+Rel(notification_service, notification_settings_db, "Настройки", "150 RPS")
+Rel(notification_service, push_service, "Push-уведомления")
+Rel(notification_service, email_service, "Email-уведомления")
+Rel(notification_worker_1, message_broker, "Подписывается на события", "Kafka Consumer")
+Rel(notification_worker_2, message_broker, "Подписывается на события", "Kafka Consumer")
+Rel(notification_worker_1, notification_db_master, "Записывает уведомления", "PostgreSQL")
+Rel(notification_worker_2, notification_db_master, "Записывает уведомления", "PostgreSQL")
+Rel(notification_db_master, notification_db_r1, "Sync replication", "Streaming")
+Rel(notification_db_master, notification_db_r2, "Sync replication", "Streaming")
+Rel(notification_db_master, notification_db_r3, "Sync replication", "Streaming")
+Rel(notification_db_master, notification_db_r4, "Async replication", "Streaming")
+
+System_Boundary(moderation_containers, "Moderation Containers") {
+    Container(moderation_service, "Moderation Service", "Go", "Жалобы")
+    ContainerDb(moderation_db, "Moderation DB", "PostgreSQL", "1.04 GB\nNo replicas")
+}
+
+Rel(moderation_service, moderation_db, "Жалобы", "60 RPS")
+
+System_Boundary(session_containers, "Session Containers") {
+    Container(session_service, "Session Service", "Go", "Управление сессиями")
+    ContainerDb(session_db_master, "Session DB Master", "PostgreSQL", "7.8 GB")
+    ContainerDb(session_db_replica, "Session DB Replica", "PostgreSQL", "Sync")
+}
+
+Rel(session_service, session_db_master, "Записывает сессии", "1,500 RPS")
+Rel(session_service, session_db_replica, "Читает сессии", "PostgreSQL")
+Rel(auth_service, session_service, "Валидация сессий", "gRPC")
+Rel(session_db_master, session_db_replica, "Sync replication", "Streaming")
+
+Container(counter_updater, "Counter Updater", "Go", "Async обновление счетчиков")
+
+Rel(counter_updater, message_broker, "Подписывается на события", "Kafka Consumer")
+Rel(counter_updater, post_db_master, "Обновляет likes_count, comments_count", "Batched updates")
+Rel(counter_updater, comment_db_master, "Обновляет likes_count", "Batched updates")
+Rel(counter_updater, user_db_master, "Обновляет followers_count", "Batched updates")
+
+Rel(user, api_gateway, "Использует", "HTTPS/REST")
+Rel(api_gateway, auth_service, "Auth", "HTTP")
+Rel(api_gateway, user_service, "Users", "HTTP")
+Rel(api_gateway, post_service, "Posts", "HTTP")
+Rel(api_gateway, comment_service, "Comments", "HTTP")
+Rel(api_gateway, likes_service, "Likes", "HTTP")
+Rel(api_gateway, follow_service, "Follows", "HTTP")
+Rel(api_gateway, location_service, "Locations", "HTTP")
+Rel(api_gateway, notification_service, "Notifications", "HTTP")
+Rel(api_gateway, moderation_service, "Reports", "HTTP")
+
+@enduml
